@@ -110,19 +110,19 @@ def crop_and_pad_uniform(img, label=None, target_shape=None, pad_to_multiple=8):
         label_padded = None
 
     params = {
-        'original_shape': img.shape,
+        'original_shape': [int(x) for x in img.shape],
         'crop_bounds': {
             'd': [int(d_start), int(d_end)],
             'h': [int(h_start), int(h_end)],
             'w': [int(w_start), int(w_end)]
         },
-        'target_shape': list(target_shape),
+        'target_shape': [int(x) for x in target_shape],
         'padding': {
             'd': [int(d_pad_before), int(d_pad_after)],
             'h': [int(h_pad_before), int(h_pad_after)],
             'w': [int(w_pad_before), int(w_pad_after)]
         },
-        'padded_shape': img_padded.shape
+        'padded_shape': [int(x) for x in img_padded.shape]
     }
 
     return img_padded, label_padded, params
@@ -266,9 +266,9 @@ def process_dataset(data_root, output_root, pad_to_multiple=8):
 
     # Save target shape for reference
     metadata = {
-        'target_shape': list(target_shape),
-        'pad_to_multiple': pad_to_multiple,
-        'max_cropped_dims': [max_d, max_h, max_w]
+        'target_shape': [int(x) for x in target_shape],
+        'pad_to_multiple': int(pad_to_multiple),
+        'max_cropped_dims': [int(max_d), int(max_h), int(max_w)]
     }
     metadata_path = os.path.join(output_root, 'preprocess_metadata.json')
     with open(metadata_path, 'w') as f:
