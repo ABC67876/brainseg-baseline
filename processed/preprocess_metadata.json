@@ -1,0 +1,13 @@
+{
+  "target_shape": [
+    160,
+    192,
+    168
+  ],
+  "pad_to_multiple": 8,
+  "max_cropped_dims": [
+    153,
+    190,
+    164
+  ]
+}
