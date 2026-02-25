@@ -81,6 +81,7 @@ class MRIDatasetNifti(object):
         print(f"Loading atlas: {atlas_path}")
         vol_atlas = self.load_nifti(atlas_path)
         seg_atlas = self.load_nifti(atlas_label_path)
+        seg_atlas[seg_atlas == 139] = 0  # Map label 139 to 0 (background)
 
         # Ensure atlas is 4D (N=1, D, H, W) - handle single volume case           
         if vol_atlas.ndim == 3:                                                   
@@ -111,6 +112,7 @@ class MRIDatasetNifti(object):
         for img_path, seg_path in zip(val_image_files, val_label_files):
             vol = self.load_nifti(img_path)
             seg = self.load_nifti(seg_path)
+            seg[seg==139] = 0
             vol = self._normalize(vol)
             seg = seg.astype(np.int32)
             vol_val.append(vol)

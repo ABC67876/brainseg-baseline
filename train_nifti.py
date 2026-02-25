@@ -125,7 +125,7 @@ if __name__ == "__main__":
                         help="Number of iterations")
     parser.add_argument("--n_save_iter", type=int, default=1000,
                         help="Frequency of model saves")
-    parser.add_argument("--model_dir", type=str, default='CANDI_Model',
+    parser.add_argument("--model_dir", type=str, default='ADNI_Model',
                         help="Output directory for models")
 
     args = parser.parse_args()
