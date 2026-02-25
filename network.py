@@ -120,6 +120,7 @@ class SpatialTransformer(nn.Module):
         """
         device = src.device
         self.grid = self.grid.to(device)
+        import pdb;pdb.set_trace()
         new_locs = self.grid + flow 
 
         shape = flow.shape[2:]

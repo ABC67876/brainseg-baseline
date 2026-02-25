@@ -142,7 +142,6 @@ class MRIDatasetNifti(object):
         vol_val = vol_val[..., np.newaxis]
         seg_val = seg_val[..., np.newaxis]
         vol_train = vol_train[..., np.newaxis]
-        import pdb;pdb.set_trace()
 
         # Convert to channel-first: (N, D, H, W, C) -> (N, C, D, H, W)
         vol_atlas = vol_atlas.transpose(0, 4, 1, 2, 3)
