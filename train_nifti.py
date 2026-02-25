@@ -54,8 +54,8 @@ def train(args):
 
     # Initialize model
     model = Augnet(img_shape, normalization='batchnorm')
-    trf = SpatialTransformer(args.shape, 'nearest')
-    trf2 = SpatialTransformer(args.shape)
+    trf = SpatialTransformer(img_shape, 'nearest')
+    trf2 = SpatialTransformer(img_shape)
     model.train()
     model.cuda()
 
