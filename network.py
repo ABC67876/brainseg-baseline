@@ -187,7 +187,7 @@ class Decoder(nn.Module):
         self.block1_up =  UpsamplingDeconvBlock(filters * 2, filters * 1, normalization=normalization)
         self.block1 = ConvBlock(n_stages=2,n_filters_in=filters*2,n_filters_out=filters*2,normalization=normalization)
 
-        self.out_conv = nn.Conv3d(filters*2, 29, 1)
+        self.out_conv = nn.Conv3d(filters*2, 139, 1)
 
 
     def forward(self,features):

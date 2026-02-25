@@ -88,7 +88,7 @@ def test(args):
             pre = out.argmax(1,keepdim=True)
             
         pre = pre.cpu().numpy()
-        dic = dice(pre,get_lab(seg,args.label_mapping),labels=list(range(1,29)))
+        dic = dice(pre, seg, labels=list(range(1, 139)))
         print(id1,'\n',dic.mean())
         dice_scores[i] = dic
     print('final_result:')
