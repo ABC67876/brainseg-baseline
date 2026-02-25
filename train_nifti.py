@@ -45,6 +45,7 @@ def train(args):
     (vol_atlas, seg_atlas, ids_atlas), \
     (vol_train, _, ids_train), \
     (vol_val, seg_val, ids_val) = dataset.load_dataset()
+    import pdb; pdb.set_trace()
 
     # Get shape from dataset
     img_shape = dataset.img_shape

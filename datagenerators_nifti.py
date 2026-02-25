@@ -82,8 +82,13 @@ class MRIDatasetNifti(object):
         vol_atlas = self.load_nifti(atlas_path)
         seg_atlas = self.load_nifti(atlas_label_path)
 
-        # Auto-detect image shape from atlas
-        self.img_shape = vol_atlas.shape
+        # Ensure atlas is 4D (N=1, D, H, W) - handle single volume case           
+        if vol_atlas.ndim == 3:                                                   
+            vol_atlas = vol_atlas[np.newaxis, ...]                                
+            seg_atlas = seg_atlas[np.newaxis, ...]                                
+                                                                                  
+        # Auto-detect image shape from atlas (remove N dimension)                 
+        self.img_shape = vol_atlas.shape[1:] 
         print(f"Detected image shape: {self.img_shape}")
         print(f"Atlas label unique: {np.unique(seg_atlas)}")
 
@@ -137,6 +142,7 @@ class MRIDatasetNifti(object):
         vol_val = vol_val[..., np.newaxis]
         seg_val = seg_val[..., np.newaxis]
         vol_train = vol_train[..., np.newaxis]
+        import pdb;pdb.set_trace()
 
         # Convert to channel-first: (N, D, H, W, C) -> (N, C, D, H, W)
         vol_atlas = vol_atlas.transpose(0, 4, 1, 2, 3)
