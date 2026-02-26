@@ -75,6 +75,18 @@ def test(args):
     # Get shape from dataset
     img_shape = dataset.img_shape
 
+    # Determine test set: training (unlabeled) or validation
+    if args.test_on_train:
+        print(f"\nTesting on training (unlabeled) data: {vol_train.shape[0]} samples")
+        test_vols = vol_train
+        test_ids = ids_train
+        test_segs = None  # No labels for training data
+    else:
+        print(f"\nTesting on validation data: {vol_val.shape[0]} samples")
+        test_vols = vol_val
+        test_ids = ids_val
+        test_segs = seg_val
+
     # Load model
     print(f"\nLoading model from: {args.model_path}")
     model = Augnet(img_shape)
@@ -85,72 +97,101 @@ def test(args):
     # Create output directory
     os.makedirs(args.output_dir, exist_ok=True)
 
-    # Compute Dice scores for validation set
+    # Run inference
     num_classes = 138  # 1-138
-    dice_scores = np.zeros((vol_val.shape[0], num_classes))
 
-    for i in range(vol_val.shape[0]):
-        filename = ids_val[i]
-        vol = vol_val[i:i+1]
-        seg_true = seg_val[i:i+1]
+    if args.test_on_train:
+        # No labels for training data - just save predictions
+        for i in range(test_vols.shape[0]):
+            filename = test_ids[i]
+            vol = test_vols[i:i+1]
 
-        # Data is already in (N, C, D, H, W) format from datagenerators_nifti
-        vol = torch.from_numpy(vol).cuda()
+            # Data is already in (N, C, D, H, W) format from datagenerators_nifti
+            vol = torch.from_numpy(vol).cuda()
 
-        with torch.no_grad():
-            out = model.decoder(model.encoder(vol))
-            pre = out.argmax(1, keepdim=True)
+            with torch.no_grad():
+                out = model.decoder(model.encoder(vol))
+                pre = out.argmax(1, keepdim=True)
 
-        pre = pre.cpu().numpy()
-        seg_true = seg_true.squeeze()  # Remove batch dim
-        pre_squeezed = pre.squeeze()
+            pre = pre.cpu().numpy()
+            pre_squeezed = pre.squeeze()
 
-        # Reverse transformation if params available
-        if transform_params is not None and filename in transform_params:
-            params = transform_params[filename]
-            # Reverse: first reverse the network output, then apply transform
-            # The pre is already in processed space (cropped and padded)
-            pre_reversed = reverse_transform(pre_squeezed, params)
-        else:
-            pre_reversed = pre_squeezed
+            # Reverse transformation if params available
+            if transform_params is not None and filename in transform_params:
+                params = transform_params[filename]
+                pre_reversed = reverse_transform(pre_squeezed, params)
+            else:
+                pre_reversed = pre_squeezed
 
-        # Save prediction in original space (same format as label folder)
-        pred_nifti = nib.Nifti1Image(pre_reversed.astype(np.int32), np.eye(4))
-        output_path = os.path.join(args.output_dir, filename)
-        nib.save(pred_nifti, output_path)
+            # Save prediction
+            pred_nifti = nib.Nifti1Image(pre_reversed.astype(np.int32), np.eye(4))
+            output_path = os.path.join(args.output_dir, filename)
+            nib.save(pred_nifti, output_path)
+            print(f"Saved prediction for {filename}")
 
-        # Compute Dice for labels 1-138
-        # Use the reversed prediction for Dice calculation
-        if transform_params is not None and filename in transform_params:
-            # Also reverse ground truth for fair comparison
-            params = transform_params[filename]
-            seg_true_reversed = reverse_transform(seg_true, params)
-            dic = dice(pre_reversed, seg_true_reversed, labels=list(range(1, 139)))
-        else:
-            dic = dice(pre_squeezed, seg_true, labels=list(range(1, 139)))
+        print(f"\nPredictions saved to: {args.output_dir}")
+    else:
+        # Validation set - compute Dice scores
+        dice_scores = np.zeros((test_vols.shape[0], num_classes))
 
-        # Handle case where some labels might be missing
-        if len(dic) < num_classes:
-            dic_full = np.zeros(num_classes)
-            dic_full[:len(dic)] = dic
-            dic = dic_full
+        for i in range(test_vols.shape[0]):
+            filename = test_ids[i]
+            vol = test_vols[i:i+1]
+            seg_true = test_segs[i:i+1]
 
-        dice_scores[i] = dic
-        print(f"{filename}: Mean Dice = {dic.mean():.4f}")
+            # Data is already in (N, C, D, H, W) format from datagenerators_nifti
+            vol = torch.from_numpy(vol).cuda()
 
-    # Print final results
-    print("\n" + "=" * 50)
-    print("Final Results:")
-    print("=" * 50)
-    mean_per_case = dice_scores.mean(axis=1)
-    print(f"Mean Dice (per case): {mean_per_case.mean():.4f} ± {mean_per_case.std():.4f}")
-    print(f"Min: {mean_per_case.min():.4f}, Max: {mean_per_case.max():.4f}")
-    print(f"Overall Mean Dice: {dice_scores.mean():.4f}")
+            with torch.no_grad():
+                out = model.decoder(model.encoder(vol))
+                pre = out.argmax(1, keepdim=True)
 
-    # Save results
-    np.save(args.output, mean_per_case)
-    print(f"\nResults saved to: {args.output}")
-    print(f"Predictions saved to: {args.output_dir}")
+            pre = pre.cpu().numpy()
+            seg_true = seg_true.squeeze()  # Remove batch dim
+            pre_squeezed = pre.squeeze()
+
+            # Reverse transformation if params available
+            if transform_params is not None and filename in transform_params:
+                params = transform_params[filename]
+                pre_reversed = reverse_transform(pre_squeezed, params)
+            else:
+                pre_reversed = pre_squeezed
+
+            # Save prediction in original space
+            pred_nifti = nib.Nifti1Image(pre_reversed.astype(np.int32), np.eye(4))
+            output_path = os.path.join(args.output_dir, filename)
+            nib.save(pred_nifti, output_path)
+
+            # Compute Dice for labels 1-138
+            if transform_params is not None and filename in transform_params:
+                params = transform_params[filename]
+                seg_true_reversed = reverse_transform(seg_true, params)
+                dic = dice(pre_reversed, seg_true_reversed, labels=list(range(1, 139)))
+            else:
+                dic = dice(pre_squeezed, seg_true, labels=list(range(1, 139)))
+
+            # Handle case where some labels might be missing
+            if len(dic) < num_classes:
+                dic_full = np.zeros(num_classes)
+                dic_full[:len(dic)] = dic
+                dic = dic_full
+
+            dice_scores[i] = dic
+            print(f"{filename}: Mean Dice = {dic.mean():.4f}")
+
+        # Print final results for validation
+        print("\n" + "=" * 50)
+        print("Final Results:")
+        print("=" * 50)
+        mean_per_case = dice_scores.mean(axis=1)
+        print(f"Mean Dice (per case): {mean_per_case.mean():.4f} ± {mean_per_case.std():.4f}")
+        print(f"Min: {mean_per_case.min():.4f}, Max: {mean_per_case.max():.4f}")
+        print(f"Overall Mean Dice: {dice_scores.mean():.4f}")
+
+        # Save results
+        np.save(args.output, mean_per_case)
+        print(f"\nResults saved to: {args.output}")
+        print(f"Predictions saved to: {args.output_dir}")
 
 
 if __name__ == "__main__":
@@ -166,6 +207,8 @@ if __name__ == "__main__":
                         help="Output file for Dice scores")
     parser.add_argument("--output_dir", type=str, default='predictions',
                         help="Directory to save prediction nifti files")
+    parser.add_argument("--test_on_train", action="store_true",
+                        help="Test on training (unlabeled) data instead of validation")
 
     args = parser.parse_args()
 
