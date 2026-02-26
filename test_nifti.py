@@ -94,10 +94,7 @@ def test(args):
         vol = vol_val[i:i+1]
         seg_true = seg_val[i:i+1]
 
-        # Transpose: (N, C, D, H, W) -> (N, D, H, W, C)
-        vol = vol.transpose(0, 4, 1, 2, 3)
-        seg_true = seg_true.transpose(0, 4, 1, 2, 3)
-
+        # Data is already in (N, C, D, H, W) format from datagenerators_nifti
         vol = torch.from_numpy(vol).cuda()
 
         with torch.no_grad():
